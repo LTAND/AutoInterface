@@ -1,8 +1,8 @@
 # coding:utf-8
 import xlrd
 class ExcelUtil():
-    def __init__(self, excelPath, sheetName="Sheet1"):
-        self.data = xlrd.open_workbook(excelPath)
+    def __init__(self, filepath, sheetName="Sheet1"):
+        self.data = xlrd.open_workbook(filepath)
         self.table = self.data.sheet_by_name(sheetName)
         # 获取第一行作为key值
         self.keys = self.table.row_values(0)
@@ -30,7 +30,7 @@ class ExcelUtil():
 
 if __name__ == "__main__":
     # 测试读取Excel
-    filepath = r"20181022AutoInterface\02.xls"
-    sheetName = "sheet1"
+    filepath = r"D:\vsworkspace\2018年10月\20181022自动化接口2\02.xls"
+    sheetName = "Sheet2"
     data = ExcelUtil(filepath, sheetName)
     print(data.dict_data())

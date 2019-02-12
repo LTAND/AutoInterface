@@ -3,56 +3,55 @@ import ExcelUtil as readSheet
 import RequUtil as request
 import unittest
 import ast
-
+import json
 class test_sheet1(unittest.TestCase):
-    # 设计测试用例
+    # 设计测试用例模板
     def test_1_2_3(self):
         for i in range(0, len(reps)):
             try:
                 # if reps[i].getJson()['status'] == 200:
                 print("\n==================================================================================")
-                print("用例编号:",sheet_data[i]['Id'],"\n用例名称:",sheet_data[i]['Name'],'\n地址:',sheet_data[i]['Url'])
-                print('响应数据:\n',reps[i].getJson())
+                print("用例编号:",sheet_data[i]['Id'],"\n用例名称:",sheet_data[i]['Name'],'\n地址:',sheet_data[i]['Url'], '\n请求参数:',Params[i])
+                print('响应数据:\n',json.dumps(reps[i].getJson(), sort_keys=False, indent=4, ensure_ascii=False))
             except:
-                 print("用例编号:",sheet_data[i]['Id'],"用例名称:",sheet_data[i]['Name'],'请求出错')
-
-# class test_sheet2(unittest.TestCase):
-
-#     def test_bbs(self):
-#         for i in range(0, len(reps)):
-#             try:
-#                 print("\n==================================================================================")
-
-
-
-#             except:
-#                 print("用例编号:",sheet_data[i]['Id'],"用例名称:",sheet_data[i]['Name'],'请求出错')
+                 print(sheet_data[i]['Id'],sheet_data[i]['Name'],'请求出错!!!')
 
 if __name__ == '__main__':
 
     # 读取Excel数据
-    filepath = r"D:\vsworkspace\2018年10月\20181022自动化接口2\02.xls"    # Excel文件路径
-    sheetName = "Sheet2"        # 表名
+    filepath = r"D:\vsworkspace\20181022自动化接口3\02.xls"    # Excel文件路径
+    sheetName = "Sheet1"        # 表名
     sheet = readSheet.ExcelUtil(filepath, sheetName)
     sheet_data = sheet.dict_data()
     
     reps = []   # 存放表格每一行请求对象
-    Params = []
+    Params = []  # 存放每一行的请求参数
+
     # 传递Excel数据请求参数
+
+    def make_dict(curRow, sp):
+        # 将参数根据划分转化字典
+        curList = curRow.split(sp)
+        keys.append(str(curList[0]))                                      
+        values.append(str(curList[1]))           
+        return dict(zip(keys,values))
+
     for i in range(0, len(sheet_data)):
         keys = []      # 存放参数名 eg：type
         values = []    # 存放参数值 eg：huitongkuaidi
         ParamsNum = int(sheet_data[i]['Params'])  # 每行的参数个数   eg：2 
-        if ParamsNum > 0:
-            for x in range(1, ParamsNum+1):                 # 遍历当前行的每个参数   
-                curList = sheet_data[i]['Parameter'+str(x)].split("=")      # 当前行的当前参数  eg：type=huitongkuaidi
-                keys.append(str(curList[0]))                                      
-                values.append(str(curList[1]))
-                Params.append(dict(zip(keys,values)))
-                # 测试打印当前参数
-                # print(curList[0],curList[1])
-                # print(dict(zip(keys,values)))
-                # print(Params[i])
+
+        # 参数类别处理
+        if ParamsNum == 0:
+            Params.append("null")
+        elif ParamsNum >= 1:
+            for x in range(1, ParamsNum+1):
+                curDict = make_dict(sheet_data[i]['Parameter'+str(x)], "=")
+            Params.append(curDict)
+        elif ParamsNum == -1:
+            Params.append(sheet_data[i]['Parameter1'])
+
+        # 传参请求
         reps.append(request.RequUtil(
             sheet_data[i]['Url'],  
             sheet_data[i]['Method'],
@@ -61,8 +60,9 @@ if __name__ == '__main__':
             sheet_data[i]['Status_code'],
             sheet_data[i]['Code']
         ))
+        
         # 测试每条请求响应数据
         # print('响应的数据:',reps[i].getJson())
-    
+
     # 执行测试用例
     unittest.main()

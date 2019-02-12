@@ -10,7 +10,7 @@ class RequUtil():
         self.url = str(url)
         self.method = str(method)
         self.headers = str(headers)
-        self.params = params
+        self.params = str(params)
         self.status_code = int(status_code)
         self.code = int(code)
         
@@ -24,12 +24,12 @@ class RequUtil():
                 if self.params == "null":
                     response = requests.get(self.url, headers=ast.literal_eval(self.headers))
                 else:
-                    response = requests.get(self.url, params=self.params, headers=(ast.literal_eval(self.headers)))
+                    response = requests.get(self.url, params=ast.literal_eval(self.params), headers=(ast.literal_eval(self.headers)))
             elif self.method == "post":
                 if self.params == "null":
                     response = requests.post(self.url, headers=ast.literal_eval(self.headers))
                 else:
-                    response = requests.post(self.url, data=self.params, headers=ast.literal_eval(self.headers))
+                    response = requests.post(self.url, data=ast.literal_eval(self.params), headers=ast.literal_eval(self.headers))
             response.encoding="utf-8"  # 设置响应数据的编码
             return response
         except:
@@ -48,7 +48,7 @@ class RequUtil():
 if __name__ == '__main__':
 
     # 读取Excel数据
-    filepath = r"D:\vsworkspace\2018年10月\20181022自动化接口2\02.xls"    # Excel文件路径
+    filepath = r"D:\vsworkspace\20181022自动化接口3\02.xls"    # Excel文件路径
     sheetName = "Sheet1"        # 表名
     sheet = readSheet.ExcelUtil(filepath, sheetName)
     sheet_data = sheet.dict_data()

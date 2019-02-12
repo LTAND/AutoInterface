@@ -1,5 +1,6 @@
 # coding:utf-8
 import xlrd
+import json
 class ExcelUtil():
     def __init__(self, filepath, sheetName="Sheet1"):
         self.data = xlrd.open_workbook(filepath)
@@ -30,7 +31,9 @@ class ExcelUtil():
 
 if __name__ == "__main__":
     # 测试读取Excel
-    filepath = r"D:\vsworkspace\2018年10月\20181022自动化接口2\02.xls"
-    sheetName = "Sheet2"
+    filepath = r'20181022自动化接口3\02.xls'
+    sheetName = "Sheet1"
     data = ExcelUtil(filepath, sheetName)
-    print(data.dict_data())
+    # print(data.dict_data())
+    # print(json.dumps(data.dict_data(), sort_keys=False, indent=4, ensure_ascii=False))
+

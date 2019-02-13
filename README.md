@@ -26,4 +26,4 @@ cd AutoInterface
 python test_HTMLTestReportCN.py
 ```
 #### 生成后的html
-![Alt text](reportHtml\img.jpg)
+![Alt text](https://github.com/LTAND/AutoInterface/blob/master/reportHtml/img.jpg)

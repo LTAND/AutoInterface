@@ -2,7 +2,6 @@
 import time
 import unittest
 import HTMLTestReportCN
-
 import ExcelUtil as readSheet
 import RequUtil as request
 import time

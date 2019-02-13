@@ -11,6 +11,7 @@
 #### pip install unittest
 
 ## 2. 按dataExcel/02.xls例子填写表格信息
+![Alt text](https://github.com/LTAND/AutoInterface/blob/master/reportHtml/excel02_sheet1.jpg)
 #### Params填写请求参数的个数 
 #### 1-表示一个参数,可以容纳多个参数;
 #### 0-表示无参数;

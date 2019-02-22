@@ -1,10 +1,9 @@
 # coding:utf-8
 import requests
 import json
-import ExcelUtil as readSheet
 import ast
-
-class RequUtil():
+import time
+class Request():
 
     def __init__(self, url, method, headers, params, status_code, code):
         self.url = str(url)
@@ -12,10 +11,10 @@ class RequUtil():
         self.headers = str(headers)
         self.params = str(params)
         self.status_code = int(status_code)
-        self.code = int(code)
+        self.code = str(code)
         
         # 测试传递的参数
-        # print("RequUtil.py测试传递的参数:", self.url, self.method,self.headers, self.params, self.status_code, self.code)
+        # print("Request.py测试传递的参数:", self.url, self.method,self.headers, self.params, self.status_code, self.code)
 
     def getRespon(self):
         # 请求方式
@@ -32,52 +31,48 @@ class RequUtil():
                     response = requests.post(self.url, data=ast.literal_eval(self.params), headers=ast.literal_eval(self.headers))
             response.encoding="utf-8"  # 设置响应数据的编码
             return response
-        except:
-            print('请求失败!')
+        except Exception as e:
+            print(now, 'Request 请求失败:', e,'---',self.url, self.method, self.params)
+            return e
 
     def getJson(self):
         # 以Json格式响应的数据
-        # try:
-        #     json_data = self.getRespon().json()
-        #     return json_data
-        # except:
-        #     print('无法获取响应数据!')
-        json_data = self.getRespon().json()
-        return json_data
+        try:
+            json_data = self.getRespon().json()
+            return json_data
+        except Exception as e:
+            print(now, 'Request 响应失败:', e,'---',self.url, self.method, self.params)
+            return 'Request End'
 
 if __name__ == '__main__':
 
-    # 读取Excel数据
-    filepath = r"D:\vsworkspace\2018年10月\AutoInterface\20181022自动化接口v1.3\dataExcel\02.xls"    # Excel文件路径
-    sheetName = "Sheet1"        # 表名
-    sheet = readSheet.ExcelUtil(filepath, sheetName)
-    sheet_data = sheet.dict_data()
-    
+    now = time.strftime("[%Y-%m-%d %H:%M:%S]")
     # 测试请求数据
-    re1 = RequUtil(
+    re1 = Request(
         'http://www.kuaidi100.com/query',
-        'get',
+        'get1',
         {"Content-Type": "application/json"},
         {"type":"huitongkuaidi","postid":"350757819118"},
         200,
         0) 
-    re2 = RequUtil(
+    re2 = Request(
         'http://www.weather.com.cn/data/sk/101190408.html',
         'get',
         {"Content-Type": "text/html"},
         "null", 
         200,
         0)
-    re3 = RequUtil(
+    re3 = Request(
         'https://www.v2ex.com/api/nodes/show.json',
         'get',
         {"Content-Type": "text/html"},
-        {"name": "java"},
+        {'name': 'java'},
         200,
         0
     )
     print(re1.getJson())
     print(re2.getJson())
+    print(re3.getJson())
 
     
 

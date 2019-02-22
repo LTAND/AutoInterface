@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Test Report</title>
+    <link href="assets/style.css" rel="stylesheet" type="text/css"/></head>
+  <body onLoad="init()">
+    <script>/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+function toArray(iter) {
+    if (iter === null) {
+        return null;
+    }
+    return Array.prototype.slice.call(iter);
+}
+
+function find(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return elem.querySelector(selector);
+}
+
+function find_all(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return toArray(elem.querySelectorAll(selector));
+}
+
+function sort_column(elem) {
+    toggle_sort_states(elem);
+    var colIndex = toArray(elem.parentNode.childNodes).indexOf(elem);
+    var key;
+    if (elem.classList.contains('numeric')) {
+        key = key_num;
+    } else if (elem.classList.contains('result')) {
+        key = key_result;
+    } else {
+        key = key_alpha;
+    }
+    sort_table(elem, key(colIndex));
+}
+
+function show_all_extras() {
+    find_all('.col-result').forEach(show_extras);
+}
+
+function hide_all_extras() {
+    find_all('.col-result').forEach(hide_extras);
+}
+
+function show_extras(colresult_elem) {
+    var extras = colresult_elem.parentNode.nextElementSibling;
+    var expandcollapse = colresult_elem.firstElementChild;
+    extras.classList.remove("collapsed");
+    expandcollapse.classList.remove("expander");
+    expandcollapse.classList.add("collapser");
+}
+
+function hide_extras(colresult_elem) {
+    var extras = colresult_elem.parentNode.nextElementSibling;
+    var expandcollapse = colresult_elem.firstElementChild;
+    extras.classList.add("collapsed");
+    expandcollapse.classList.remove("collapser");
+    expandcollapse.classList.add("expander");
+}
+
+function show_filters() {
+    var filter_items = document.getElementsByClassName('filter');
+    for (var i = 0; i < filter_items.length; i++)
+        filter_items[i].hidden = false;
+}
+
+function add_collapse() {
+    // Add links for show/hide all
+    var resulttable = find('table#results-table');
+    var showhideall = document.createElement("p");
+    showhideall.innerHTML = '<a href="javascript:show_all_extras()">Show all details</a> / ' +
+                            '<a href="javascript:hide_all_extras()">Hide all details</a>';
+    resulttable.parentElement.insertBefore(showhideall, resulttable);
+
+    // Add show/hide link to each result
+    find_all('.col-result').forEach(function(elem) {
+        var collapsed = get_query_parameter('collapsed') || 'Passed';
+        var extras = elem.parentNode.nextElementSibling;
+        var expandcollapse = document.createElement("span");
+        if (collapsed.includes(elem.innerHTML)) {
+            extras.classList.add("collapsed");
+            expandcollapse.classList.add("expander");
+        } else {
+            expandcollapse.classList.add("collapser");
+        }
+        elem.appendChild(expandcollapse);
+
+        elem.addEventListener("click", function(event) {
+            if (event.currentTarget.parentNode.nextElementSibling.classList.contains("collapsed")) {
+                show_extras(event.currentTarget);
+            } else {
+                hide_extras(event.currentTarget);
+            }
+        });
+    })
+}
+
+function get_query_parameter(name) {
+    var match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
+function init () {
+    reset_sort_headers();
+
+    add_collapse();
+
+    show_filters();
+
+    toggle_sort_states(find('.initial-sort'));
+
+    find_all('.sortable').forEach(function(elem) {
+        elem.addEventListener("click",
+                              function(event) {
+                                  sort_column(elem);
+                              }, false)
+    });
+
+};
+
+function sort_table(clicked, key_func) {
+    var rows = find_all('.results-table-row');
+    var reversed = !clicked.classList.contains('asc');
+    var sorted_rows = sort(rows, key_func, reversed);
+    /* Whole table is removed here because browsers acts much slower
+     * when appending existing elements.
+     */
+    var thead = document.getElementById("results-table-head");
+    document.getElementById('results-table').remove();
+    var parent = document.createElement("table");
+    parent.id = "results-table";
+    parent.appendChild(thead);
+    sorted_rows.forEach(function(elem) {
+        parent.appendChild(elem);
+    });
+    document.getElementsByTagName("BODY")[0].appendChild(parent);
+}
+
+function sort(items, key_func, reversed) {
+    var sort_array = items.map(function(item, i) {
+        return [key_func(item), i];
+    });
+    var multiplier = reversed ? -1 : 1;
+
+    sort_array.sort(function(a, b) {
+        var key_a = a[0];
+        var key_b = b[0];
+        return multiplier * (key_a >= key_b ? 1 : -1);
+    });
+
+    return sort_array.map(function(item) {
+        var index = item[1];
+        return items[index];
+    });
+}
+
+function key_alpha(col_index) {
+    return function(elem) {
+        return elem.childNodes[1].childNodes[col_index].firstChild.data.toLowerCase();
+    };
+}
+
+function key_num(col_index) {
+    return function(elem) {
+        return parseFloat(elem.childNodes[1].childNodes[col_index].firstChild.data);
+    };
+}
+
+function key_result(col_index) {
+    return function(elem) {
+        var strings = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed',
+                       'Skipped', 'Passed'];
+        return strings.indexOf(elem.childNodes[1].childNodes[col_index].firstChild.data);
+    };
+}
+
+function reset_sort_headers() {
+    find_all('.sort-icon').forEach(function(elem) {
+        elem.parentNode.removeChild(elem);
+    });
+    find_all('.sortable').forEach(function(elem) {
+        var icon = document.createElement("div");
+        icon.className = "sort-icon";
+        icon.textContent = "vvv";
+        elem.insertBefore(icon, elem.firstChild);
+        elem.classList.remove("desc", "active");
+        elem.classList.add("asc", "inactive");
+    });
+}
+
+function toggle_sort_states(elem) {
+    //if active, toggle between asc and desc
+    if (elem.classList.contains('active')) {
+        elem.classList.toggle('asc');
+        elem.classList.toggle('desc');
+    }
+
+    //if inactive, reset all other functions and add ascending active
+    if (elem.classList.contains('inactive')) {
+        reset_sort_headers();
+        elem.classList.remove('inactive');
+        elem.classList.add('active');
+    }
+}
+
+function is_all_rows_hidden(value) {
+  return value.hidden == false;
+}
+
+function filter_table(elem) {
+    var outcome_att = "data-test-result";
+    var outcome = elem.getAttribute(outcome_att);
+    class_outcome = outcome + " results-table-row";
+    var outcome_rows = document.getElementsByClassName(class_outcome);
+
+    for(var i = 0; i < outcome_rows.length; i++){
+        outcome_rows[i].hidden = !elem.checked;
+    }
+
+    var rows = find_all('.results-table-row').filter(is_all_rows_hidden);
+    var all_rows_hidden = rows.length == 0 ? true : false;
+    var not_found_message = document.getElementById("not-found-message");
+    not_found_message.hidden = !all_rows_hidden;
+}
+</script>
+    <h1>report.html</h1>
+    <p>Report generated on 21-Feb-2019 at 14:12:45 by <a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a> v1.20.0</p>
+    <h2>Environment</h2>
+    <table id="environment">
+      <tr>
+        <td>Packages</td>
+        <td>{&apos;pytest&apos;: &apos;4.3.0&apos;, &apos;py&apos;: &apos;1.7.0&apos;, &apos;pluggy&apos;: &apos;0.8.1&apos;}</td></tr>
+      <tr>
+        <td>Platform</td>
+        <td>Windows-10-10.0.15063-SP0</td></tr>
+      <tr>
+        <td>Plugins</td>
+        <td>{&apos;metadata&apos;: &apos;1.8.0&apos;, &apos;html&apos;: &apos;1.20.0&apos;}</td></tr>
+      <tr>
+        <td>Python</td>
+        <td>3.7.0</td></tr></table>
+    <h2>Summary</h2>
+    <p>8 tests ran in 1.42 seconds. </p>
+    <p class="filter" hidden="true">(Un)check the boxes to filter the results.</p><input checked="true" class="filter" data-test-result="passed" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="passed">4 passed</span>, <input checked="true" class="filter" data-test-result="skipped" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="skipped">0 skipped</span>, <input checked="true" class="filter" data-test-result="failed" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="failed">4 failed</span>, <input checked="true" class="filter" data-test-result="error" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="error">0 errors</span>, <input checked="true" class="filter" data-test-result="xfailed" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="xfailed">0 expected failures</span>, <input checked="true" class="filter" data-test-result="xpassed" disabled="true" hidden="true" name="filter_checkbox" onChange="filter_table(this)" type="checkbox"/><span class="xpassed">0 unexpected passes</span>
+    <h2>Results</h2>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable result initial-sort" col="result">Result</th>
+          <th class="sortable" col="name">Test</th>
+          <th class="sortable numeric" col="duration">Duration</th>
+          <th>Links</th></tr>
+        <tr hidden="true" id="not-found-message">
+          <th colspan="4">No results found. Try to check the filters</th></tr></thead>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">run.py::Test_api_pytest::test_check[data2]</td>
+          <td class="col-duration">0.16</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;run.Test_api_pytest object at 0x040709F0&gt;, data = {&#x27;Code&#x27;: &#x27;{&quot;stars&quot;: &quot;7545&quot;}&#x27;, &#x27;Headers&#x27;: &#x27;{&quot;Content-Type&quot;: &quot;application/json&quot;}&#x27;, &#x27;Id&#x27;: &#x27;test-3&#x27;, &#x27;Method&#x27;: &#x27;get&#x27;, ...}<br/><br/>    @pytest.mark.parametrize(&quot;data&quot;, data)<br/>    def test_check(self, data):<br/>        r = Request(<br/>            data[&#x27;Url&#x27;],<br/>            data[&#x27;Method&#x27;],<br/>            data[&#x27;Headers&#x27;],<br/>            data[&#x27;Params&#x27;],<br/>            data[&#x27;Status_code&#x27;],<br/>            data[&#x27;Code&#x27;]<br/>        )<br/>        js_re = r.getJson()<br/>    <br/>        # 表格设置的检查点<br/>        dict_Code = json.loads(data[&#x27;Code&#x27;])<br/>        code_first_key = str(list(dict_Code.keys())[0])<br/>        code_first_value = str(list(dict_Code.values())[0])<br/>    <br/>        # assert int(data[&#x27;Status_code&#x27;]) == int(js_re.get(&#x27;status&#x27;)) # 断言请求状态<br/>    <br/>        print(&quot;用例编号:&quot;, data[&#x27;Id&#x27;], &quot;\n用例名称:&quot;, data[&#x27;Name&#x27;], &#x27;\n请求地址:&#x27;,data[&#x27;Url&#x27;])<br/>        print(&quot;Code检查点:&quot;, dict_Code)<br/>        print(&#x27;响应数据:\n&#x27;, json.dumps(js_re, sort_keys=False, indent=4, ensure_ascii=False))<br/>&gt;       assert code_first_value == str(js_re.get(code_first_key))<br/><span class="error">E       AssertionError: assert &#x27;7545&#x27; == &#x27;7549&#x27;</span><br/><span class="error">E         - 7545</span><br/><span class="error">E         ?    ^</span><br/><span class="error">E         + 7549</span><br/><span class="error">E         ?    ^</span><br/><br/>run.py:81: AssertionError<br/>----------------------------- Captured stdout call -----------------------------<br/>用例编号: test-3 
+用例名称: 论坛接口正确请求1 
+请求地址: https://www.v2ex.com/api/nodes/show.json
+Code检查点: {&#x27;stars&#x27;: &#x27;7545&#x27;}
+响应数据:
+ {
+    &quot;avatar_large&quot;: &quot;//cdn.v2ex.com/navatar/8613/985e/90_large.png?m=1548747297&quot;,
+    &quot;name&quot;: &quot;python&quot;,
+    &quot;avatar_normal&quot;: &quot;//cdn.v2ex.com/navatar/8613/985e/90_normal.png?m=1548747297&quot;,
+    &quot;title&quot;: &quot;Python&quot;,
+    &quot;url&quot;: &quot;https://www.v2ex.com/go/python&quot;,
+    &quot;topics&quot;: 10968,
+    &quot;footer&quot;: &quot;&quot;,
+    &quot;header&quot;: &quot;这里讨论各种 Python 语言编程话题，也包括 Django，Tornado 等框架的讨论。这里是一个能够帮助你解决实际问题的地方。&quot;,
+    &quot;title_alternative&quot;: &quot;Python&quot;,
+    &quot;avatar_mini&quot;: &quot;//cdn.v2ex.com/navatar/8613/985e/90_mini.png?m=1548747297&quot;,
+    &quot;stars&quot;: 7549,
+    &quot;root&quot;: false,
+    &quot;id&quot;: 90,
+    &quot;parent_node_name&quot;: &quot;programming&quot;
+}
+</div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">run.py::Test_api_pytest::test_check[data4]</td>
+          <td class="col-duration">0.33</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;run.Test_api_pytest object at 0x044E9190&gt;, data = {&#x27;Code&#x27;: &#x27;{&quot;state&quot;: &quot;0&quot;}&#x27;, &#x27;Headers&#x27;: &#x27;{&quot;Content-Type&quot;: &quot;application/json&quot;}&#x27;, &#x27;Id&#x27;: &#x27;testErr-5&#x27;, &#x27;Method&#x27;: &#x27;get&#x27;, ...}<br/><br/>    @pytest.mark.parametrize(&quot;data&quot;, data)<br/>    def test_check(self, data):<br/>        r = Request(<br/>            data[&#x27;Url&#x27;],<br/>            data[&#x27;Method&#x27;],<br/>            data[&#x27;Headers&#x27;],<br/>            data[&#x27;Params&#x27;],<br/>            data[&#x27;Status_code&#x27;],<br/>            data[&#x27;Code&#x27;]<br/>        )<br/>        js_re = r.getJson()<br/>    <br/>        # 表格设置的检查点<br/>        dict_Code = json.loads(data[&#x27;Code&#x27;])<br/>        code_first_key = str(list(dict_Code.keys())[0])<br/>        code_first_value = str(list(dict_Code.values())[0])<br/>    <br/>        # assert int(data[&#x27;Status_code&#x27;]) == int(js_re.get(&#x27;status&#x27;)) # 断言请求状态<br/>    <br/>        print(&quot;用例编号:&quot;, data[&#x27;Id&#x27;], &quot;\n用例名称:&quot;, data[&#x27;Name&#x27;], &#x27;\n请求地址:&#x27;,data[&#x27;Url&#x27;])<br/>        print(&quot;Code检查点:&quot;, dict_Code)<br/>        print(&#x27;响应数据:\n&#x27;, json.dumps(js_re, sort_keys=False, indent=4, ensure_ascii=False))<br/>&gt;       assert code_first_value == str(js_re.get(code_first_key))<br/><span class="error">E       AssertionError: assert &#x27;0&#x27; == &#x27;None&#x27;</span><br/><span class="error">E         - 0</span><br/><span class="error">E         + None</span><br/><br/>run.py:81: AssertionError<br/>----------------------------- Captured stdout call -----------------------------<br/>用例编号: testErr-5 
+用例名称: 论坛接口错误请求3 
+请求地址: https://www.v2ex.com/api/nodes/show.json
+Code检查点: {&#x27;state&#x27;: &#x27;0&#x27;}
+响应数据:
+ {
+    &quot;status&quot;: &quot;error&quot;,
+    &quot;message&quot;: &quot;Object Not Found&quot;,
+    &quot;rate_limit&quot;: {
+        &quot;used&quot;: 3,
+        &quot;hourly_quota&quot;: 120,
+        &quot;hourly_remaining&quot;: 117
+    }
+}
+</div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">run.py::Test_api_pytest::test_check[data5]</td>
+          <td class="col-duration">0.06</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;run.Test_api_pytest object at 0x044FC1D0&gt;, data = {&#x27;Code&#x27;: &#x27;{&quot;state&quot;: &quot;0&quot;}&#x27;, &#x27;Headers&#x27;: &#x27;{&quot;Content-Type&quot;: &quot;text/html&quot;}&#x27;, &#x27;Id&#x27;: &#x27;test-6&#x27;, &#x27;Method&#x27;: &#x27;get&#x27;, ...}<br/><br/>    @pytest.mark.parametrize(&quot;data&quot;, data)<br/>    def test_check(self, data):<br/>        r = Request(<br/>            data[&#x27;Url&#x27;],<br/>            data[&#x27;Method&#x27;],<br/>            data[&#x27;Headers&#x27;],<br/>            data[&#x27;Params&#x27;],<br/>            data[&#x27;Status_code&#x27;],<br/>            data[&#x27;Code&#x27;]<br/>        )<br/>        js_re = r.getJson()<br/>    <br/>        # 表格设置的检查点<br/>        dict_Code = json.loads(data[&#x27;Code&#x27;])<br/>        code_first_key = str(list(dict_Code.keys())[0])<br/>        code_first_value = str(list(dict_Code.values())[0])<br/>    <br/>        # assert int(data[&#x27;Status_code&#x27;]) == int(js_re.get(&#x27;status&#x27;)) # 断言请求状态<br/>    <br/>        print(&quot;用例编号:&quot;, data[&#x27;Id&#x27;], &quot;\n用例名称:&quot;, data[&#x27;Name&#x27;], &#x27;\n请求地址:&#x27;,data[&#x27;Url&#x27;])<br/>        print(&quot;Code检查点:&quot;, dict_Code)<br/>        print(&#x27;响应数据:\n&#x27;, json.dumps(js_re, sort_keys=False, indent=4, ensure_ascii=False))<br/>&gt;       assert code_first_value == str(js_re.get(code_first_key))<br/><span class="error">E       AssertionError: assert &#x27;0&#x27; == &#x27;None&#x27;</span><br/><span class="error">E         - 0</span><br/><span class="error">E         + None</span><br/><br/>run.py:81: AssertionError<br/>----------------------------- Captured stdout call -----------------------------<br/>用例编号: test-6 
+用例名称: 天气预报无参数请求 
+请求地址: http://www.weather.com.cn/data/sk/101190408.html
+Code检查点: {&#x27;state&#x27;: &#x27;0&#x27;}
+响应数据:
+ {
+    &quot;weatherinfo&quot;: {
+        &quot;city&quot;: &quot;太仓&quot;,
+        &quot;cityid&quot;: &quot;101190408&quot;,
+        &quot;temp&quot;: &quot;22.8&quot;,
+        &quot;WD&quot;: &quot;东风&quot;,
+        &quot;WS&quot;: &quot;小于3级&quot;,
+        &quot;SD&quot;: &quot;81%&quot;,
+        &quot;AP&quot;: &quot;1005.5hPa&quot;,
+        &quot;njd&quot;: &quot;暂无实况&quot;,
+        &quot;WSE&quot;: &quot;&lt;3&quot;,
+        &quot;time&quot;: &quot;17:55&quot;,
+        &quot;sm&quot;: &quot;3.2&quot;,
+        &quot;isRadar&quot;: &quot;0&quot;,
+        &quot;Radar&quot;: &quot;&quot;
+    }
+}
+</div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">run.py::Test_api_pytest::test_check[data7]</td>
+          <td class="col-duration">0.11</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;run.Test_api_pytest object at 0x044E9B10&gt;, data = {&#x27;Code&#x27;: &#x27;{&quot;state&quot;: &quot;1&quot;}&#x27;, &#x27;Headers&#x27;: &#x27;{&quot;Content-Type&quot;: &quot;application/json&quot;}&#x27;, &#x27;Id&#x27;: &#x27;webchat-8&#x27;, &#x27;Method&#x27;: &#x27;get&#x27;, ...}<br/><br/>    @pytest.mark.parametrize(&quot;data&quot;, data)<br/>    def test_check(self, data):<br/>        r = Request(<br/>            data[&#x27;Url&#x27;],<br/>            data[&#x27;Method&#x27;],<br/>            data[&#x27;Headers&#x27;],<br/>            data[&#x27;Params&#x27;],<br/>            data[&#x27;Status_code&#x27;],<br/>            data[&#x27;Code&#x27;]<br/>        )<br/>        js_re = r.getJson()<br/>    <br/>        # 表格设置的检查点<br/>        dict_Code = json.loads(data[&#x27;Code&#x27;])<br/>        code_first_key = str(list(dict_Code.keys())[0])<br/>        code_first_value = str(list(dict_Code.values())[0])<br/>    <br/>        # assert int(data[&#x27;Status_code&#x27;]) == int(js_re.get(&#x27;status&#x27;)) # 断言请求状态<br/>    <br/>        print(&quot;用例编号:&quot;, data[&#x27;Id&#x27;], &quot;\n用例名称:&quot;, data[&#x27;Name&#x27;], &#x27;\n请求地址:&#x27;,data[&#x27;Url&#x27;])<br/>        print(&quot;Code检查点:&quot;, dict_Code)<br/>        print(&#x27;响应数据:\n&#x27;, json.dumps(js_re, sort_keys=False, indent=4, ensure_ascii=False))<br/>&gt;       assert code_first_value == str(js_re.get(code_first_key))<br/><span class="error">E       AssertionError: assert &#x27;1&#x27; == &#x27;None&#x27;</span><br/><span class="error">E         - 1</span><br/><span class="error">E         + None</span><br/><br/>run.py:81: AssertionError<br/>----------------------------- Captured stdout call -----------------------------<br/>用例编号: webchat-8 
+用例名称: 微信小程序 
+请求地址: http://bl.7yue.pro/v1/classic/latest
+Code检查点: {&#x27;state&#x27;: &#x27;1&#x27;}
+响应数据:
+ {
+    &quot;error_code&quot;: 1005,
+    &quot;msg&quot;: &quot;The appkey is useless，please go to the website www.7yue.pro to apply for the appkey&quot;,
+    &quot;request&quot;: &quot;GET  /v1/classic/latest&quot;
+}
+</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">run.py::Test_api_pytest::test_check[data0]</td>
+          <td class="col-duration">0.10</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">----------------------------- Captured stdout call -----------------------------<br/>用例编号: queryErr-1 
+用例名称: 查询快递网参数错误请求 
+请求地址: http://www.kuaidi100.com/query
+Code检查点: {&#x27;state&#x27;: &#x27;0&#x27;}
+响应数据:
+ {
+    &quot;message&quot;: &quot;参数错误&quot;,
+    &quot;nu&quot;: &quot;&quot;,
+    &quot;ischeck&quot;: &quot;0&quot;,
+    &quot;condition&quot;: &quot;&quot;,
+    &quot;com&quot;: &quot;&quot;,
+    &quot;status&quot;: &quot;400&quot;,
+    &quot;state&quot;: &quot;0&quot;,
+    &quot;data&quot;: []
+}
+</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">run.py::Test_api_pytest::test_check[data1]</td>
+          <td class="col-duration">0.14</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">----------------------------- Captured stdout call -----------------------------<br/>用例编号: query-2 
+用例名称: 查询快递网参数正确请求 
+请求地址: http://www.kuaidi100.com/query
+Code检查点: {&#x27;state&#x27;: &#x27;0&#x27;}
+响应数据:
+ {
+    &quot;message&quot;: &quot;快递公司参数异常：单号不存在或者已经过期&quot;,
+    &quot;nu&quot;: &quot;&quot;,
+    &quot;ischeck&quot;: &quot;0&quot;,
+    &quot;condition&quot;: &quot;&quot;,
+    &quot;com&quot;: &quot;&quot;,
+    &quot;status&quot;: &quot;201&quot;,
+    &quot;state&quot;: &quot;0&quot;,
+    &quot;data&quot;: []
+}
+</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">run.py::Test_api_pytest::test_check[data3]</td>
+          <td class="col-duration">0.16</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">----------------------------- Captured stdout call -----------------------------<br/>用例编号: test-4 
+用例名称: 论坛接口正确请求2 
+请求地址: https://www.v2ex.com/api/nodes/show.json
+Code检查点: {&#x27;stars&#x27;: &#x27;2735&#x27;}
+响应数据:
+ {
+    &quot;avatar_large&quot;: &quot;//cdn.v2ex.com/navatar/03af/dbd6/63_large.png?m=1543386849&quot;,
+    &quot;name&quot;: &quot;java&quot;,
+    &quot;avatar_normal&quot;: &quot;//cdn.v2ex.com/navatar/03af/dbd6/63_normal.png?m=1543386849&quot;,
+    &quot;title&quot;: &quot;Java&quot;,
+    &quot;url&quot;: &quot;https://www.v2ex.com/go/java&quot;,
+    &quot;topics&quot;: 2062,
+    &quot;footer&quot;: &quot;&quot;,
+    &quot;header&quot;: &quot;The most popular programming language.&quot;,
+    &quot;title_alternative&quot;: &quot;Java&quot;,
+    &quot;avatar_mini&quot;: &quot;//cdn.v2ex.com/navatar/03af/dbd6/63_mini.png?m=1543386849&quot;,
+    &quot;stars&quot;: 2735,
+    &quot;root&quot;: false,
+    &quot;id&quot;: 63,
+    &quot;parent_node_name&quot;: &quot;programming&quot;
+}
+</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">run.py::Test_api_pytest::test_check[data6]</td>
+          <td class="col-duration">0.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">----------------------------- Captured stdout call -----------------------------<br/>用例编号: queryJson-7 
+用例名称: 查询快递网json参数 
+请求地址: http://www.kuaidi100.com/query
+Code检查点: {&#x27;state&#x27;: &#x27;0&#x27;}
+响应数据:
+ {
+    &quot;message&quot;: &quot;快递公司参数异常：单号不存在或者已经过期&quot;,
+    &quot;nu&quot;: &quot;&quot;,
+    &quot;ischeck&quot;: &quot;0&quot;,
+    &quot;condition&quot;: &quot;&quot;,
+    &quot;com&quot;: &quot;&quot;,
+    &quot;status&quot;: &quot;201&quot;,
+    &quot;state&quot;: &quot;0&quot;,
+    &quot;data&quot;: []
+}
+</div></td></tr></tbody></table></body></html>

@@ -28,3 +28,5 @@
   pytest run.py -s -v # 控制台打印信息
   pytest run.py --html=report/report.html # 生产html报告
 ```
+## 5.生成的html报告
+![Alt text](https://github.com/LTAND/AutoInterface/blob/master/images/report.jpg)
